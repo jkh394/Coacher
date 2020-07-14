@@ -1,0 +1,62 @@
+<link rel="stylesheet" type="text/css" href="../css/menu.css"/>
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,800,300" rel="stylesheet" type="text/css" />
+
+<h1 id="welcome">Welcome {{name}}!</h1>
+<nav class="nav">
+    <ul class="nav__menu">
+        <li class="nav__menu-item"><a href="/menu-admin">Home</a></li>
+        <li class="nav__menu-item"><a href="/coaches">Coaches</a></li>
+        <li class="nav__menu-item"><a href="/coachees">Coachees</a>
+                <ul class="nav__submenu">
+                        <li class="nav__submenu-item active"> <a href="/add-coachee">Add Coachee</a></li>
+                </ul>
+        </li>
+        <li class="nav__menu-item"><a href="/sessions">Sessions</a>
+                <ul class="nav__submenu">
+                        <li class="nav__submenu-item"> <a href="/create-sessions">Create Sessions</a></li>
+                </ul>
+        </li>
+        <li class="nav__menu-item"><a href="/logout">Sign Out</a></li>
+    </ul>
+</nav>
+
+<link rel="stylesheet" type="text/css" href="../css/update.css"/>
+<!-- https://codepen.io/freeCodeCamp/pen/VPaoNP -->
+
+<div class="container">
+
+    <form id="survey-form" action="" method="POST">
+    
+		<h1 id="title" class="text-center">Add A Coachee</h1>
+        <p id="description" class="description text-center">Fill out the following information to add a new coachee.</p>
+		
+		<hr style="border-color:white;">
+	
+        <div class="form-group">
+            <label id="name-label" for="name">First Name</label>
+            <input type="text" name="first" id="name" class="form-control" placeholder="Enter coachee's first name" required />
+        </div>
+        
+        <div class="form-group">
+            <label id="name-label" for="name">Last Name</label>
+            <input type="text" name="last" id="name" class="form-control" placeholder="Enter coachee's last name" required />
+        </div>
+        
+        <div class="form-group">
+            <label id="name-label" for="name">Email Address</label>
+            <input type="text" name="email" id="name" class="form-control" placeholder="Enter coach's email address" required />
+        </div>
+        
+        <div class="form-group">
+            <label id="name-label" for="name">Phone Number</label>
+            <input type="text" name="phone" id="name" class="form-control" placeholder="Enter coachee's phone number" required />
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" id="submit" class="submit-button">
+            Submit
+            </button>
+        </div>
+        
+    </form>
+</div>

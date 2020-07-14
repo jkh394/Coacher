@@ -11,20 +11,10 @@ const userSchema = new mongoose.Schema({
 	passwordHash: {type: String, required: true},
 	first: {type: String},
 	last: {type: String},
+	name: {type: String},
 	phone: {type: String}
 });
 
-//static method to compare password from user w/ hash password
-//userSchema.statics.passwordMatches = function(password, hash) {
-//	return bcrypt.compareSync(password, hash);
-//}
-//middleware to hash password
-//userSchema.pre('save', function(next) {
-//	const unsafePassword = this.password;
-//	this.password = bcrypt.hashSync(unsafePassword);
-//	next();
-//});
-//userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(uniqueValidator);
 userSchema.methods.validPassword = function(password) {
 	return bcrypt.compareSync(password, this.passwordHash);
@@ -38,6 +28,7 @@ const coacheeSchema = new mongoose.Schema({
 	email: {type: String, index: {unique: true, dropDups: true}, required: true},
 	first: {type: String},
 	last: {type: String},
+	name: {type: String},
 	phone: {type: String},
 	coach: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
 	dateAssigned: {type: Date}
@@ -49,11 +40,12 @@ const sessionSchema = new mongoose.Schema({
 	coachee: {type: String, ref: 'Coachee'},
 	date: {type: Date},
 	sessionNum: {type: Number},
+	totalNum: {type: Number},
 	sessionDate: {type: Date},
-	tookPlace: {type: Boolean},
 	canceled: {type: Boolean},
 	cancelDate: {type: Date},
-	notes: {type: String}
+	notes: {type: String},
+	status: {type: Boolean}
 	//User: {type: mongoose.Schema.Types.ObjectId, ref: 'User'} <- do i need this??
 });
 

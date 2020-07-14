@@ -19,10 +19,22 @@ const flash = require('connect-flash');
 const bcrypt = require('bcrypt');
 const saltRounds = 15;
 
-//===set up app==================================================
-app.set('view engine', 'hbs');
-const staticPath = path.resolve(__dirname, 'src');
+const expressHbs =  require('express-handlebars');
 
+//===set up app==================================================
+//https://stackoverflow.com/questions/30767928/accessing-handlebars-variable-via-javascript
+const hbs = expressHbs.create({
+	helpers: {
+		json: function(content) { return JSON.stringify(content); }
+	}, 
+	extname: "hbs",
+	defaultLayout: "layout",
+	layoutsDir: __dirname + "/views"
+});
+app.engine('hbs', hbs.engine);
+app.set('view engine', 'hbs');
+
+const staticPath = path.resolve(__dirname, 'src');
 app.use(express.static(staticPath));
 app.use(parser.urlencoded({"extended":false}));
 
@@ -37,9 +49,6 @@ mongoose.set('useCreateIndex', true);
 
 app.use(passport.initialize());
 app.use(passport.session());
-//passport.use(new passportLocal(User.authenticate()));
-//passport.serializeUser(User.serializeUser());
-//passport.deserializeUser(User.deserializeUser());
 passport.serializeUser(function(user, done) { //store user id in passport
 	done(null, user._id);
 });
@@ -82,7 +91,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/', passport.authenticate("local", {
-		successRedirect: '/coacher',
+		successRedirect: '/redirect',
 		failureRedirect: '/',
 		failureFlash: true
 	})
@@ -95,8 +104,9 @@ app.get('/register', (req, res) => {
 //https://blog.cloudboost.io/node-js-authentication-with-passport-4a125f264cd4
 app.post('/register', (req, res, next) => {
 	const { first, last, password, username, phone } = req.body;
+	const name = first + " " + last;
 	const _id = new mongoose.Types.ObjectId();
-	User.create( {_id, username, password, first, last, phone} )
+	User.create( {_id, username, password, first, last, name, phone} )
 		.then(user => {
 			req.login(user, err => {
 				if (err) {
@@ -120,8 +130,238 @@ app.all('/logout', function(req, res) {
 	res.redirect('/');
 });
 
-app.get('/coacher', function(req, res) {
-	res.render('coacher');
+app.get('/redirect', function(req, res) {
+	if (req.isAuthenticated()) {
+		if(req.user.username === "admin@email"){
+			res.redirect('/menu-admin');
+		} else {
+			res.redirect('/menu-coach');
+		}
+	} else {
+		res.redirect('/');
+	}
+});
+
+//~~~routes for coaches~~~
+app.get('/menu-coach', function(req, res) {
+	if (req.isAuthenticated()) {
+		res.render('menu-coach', {name: req.user.first});
+	} else {
+		res.redirect('/');
+	}
+});
+
+app.get('/update', function(req, res) {
+	if (req.isAuthenticated()) {
+		res.render('update', {name: req.user.first});
+	} else {
+		res.redirect('/');
+	}
+});
+
+//~~~routes for admin~~~
+app.get('/menu-admin', function(req, res) {
+	if (req.isAuthenticated()) {
+		res.render('menu-admin', {name: req.user.first});
+	} else {
+		res.redirect('/');
+	}
+});
+
+app.get('/coaches', function(req, res) {
+	if (req.isAuthenticated()) {
+		const queryObject = {};
+		
+		User.find(queryObject, function(err, result) {
+			if (err) {
+				console.log("Can't access User database");
+			} else {
+				const coachList = [];
+				for (const i in result) {
+					const coach = {
+						first: result[i].first,
+						last: result[i].last,
+						email: result[i].username,
+						phone: result[i].phone
+					};
+					coachList.push(coach);
+				}
+				res.render('coaches', {coachList: coachList, name: req.user.first});			
+			}
+		});
+	} else {
+		res.redirect('/');
+	}
+});
+
+app.get('/coachees', function(req, res) {
+	if (req.isAuthenticated()) {
+		const queryObject = {};
+		
+		Coachee.find(queryObject, function(err, result) {
+			if (err) {
+				console.log("Can't access Coachee database");
+			} else {
+				const coacheeList = [];
+				for (const i in result) {
+					const coachee = {
+						first: result[i].first,
+						last: result[i].last,
+						email: result[i].email,
+						phone: result[i].phone
+					};
+					coacheeList.push(coachee);
+				}
+				res.render('coachees', {coacheeList: coacheeList, name: req.user.first});			
+			}
+		});
+	} else {
+		res.redirect('/');
+	}
+});
+
+app.get('/add-coachee', function(req, res) {
+	if (req.isAuthenticated()) {
+		res.render('add-coachee', {name: req.user.first});
+	} else {
+		res.redirect('/');
+	}
+});
+
+app.post('/add-coachee', function(req, res) {
+	const coachee = {
+		email: req.body.email,
+		first: req.body.first,
+		last: req.body.last,
+		name: req.body.first + " " + req.body.last,
+		phone: req.body.phone
+	};
+	
+	Coachee.create(coachee, (err) => {
+		if (err) {
+			res.send(err);	
+		} else {
+			res.redirect('/coachees');
+		}
+	});
+});
+
+app.get('/sessions', function(req, res) {
+	console.log(req.query);
+	
+	if (req.isAuthenticated()) {
+		
+		User.find({}, function(err, coaches) {
+			if (err) {
+				console.log("Can't access User database");
+			} else {
+				Coachee.find({}, function(err, coachees) {
+					if (err) {
+						console.log("Can't access Coachee database");
+					} else {
+						const coachList = [];
+						const coacheeList = [];
+						for (const i in coachees) {
+							coacheeList.push(coachees[i].name);
+						}
+						for (const i in coaches) {
+							coachList.push(coaches[i].name);	
+						}
+						console.log(coacheeList);
+						
+						const queryObject = {name: req.query.coach};
+						User.find(queryObject, function(err, coach) {
+							if (err) {
+								console.log("Can't access User database");
+							} else {
+								const queryObject2 = {coach: coach._id, coachee: req.query.coachee}
+								Session.find(queryObject2, function(err, sessions) {
+									if (err) {
+										console.log("Can't access Session database");
+									} else {
+										const sessionList = [];
+										for (const i in sessions) {
+											const session = {
+												sessionNum: sessions[i].sessionNum,	
+												coach: req.query.coach,
+												coachee: sessions[i].coachee,
+												status: sessions[i].status,
+												date: sessions[i].sessionDate
+											}
+											sessionList.push(session);
+										}
+										res.render('sessions', {coachList: coachList, coacheeList: coacheeList, name: req.user.first, sessionList: sessionList});
+									}
+								});
+							}
+						});
+					}
+				});
+			}
+		});
+	} else {
+		res.redirect('/');
+	}
+});
+
+app.get('/create-sessions', function(req, res) {
+	if (req.isAuthenticated()) {
+		const queryObject = {};
+		
+		User.find(queryObject, function(err, coaches) {
+			if (err) {
+				console.log("Can't access User database");
+			} else {
+				Coachee.find(queryObject, function(err, coachees) {
+					if (err) {
+						console.log("Can't access Coachee database");
+					} else {
+						const coachList = [];
+						const coacheeList = [];
+						for (const i in coachees) {
+							coacheeList.push(coachees[i].name);
+						}
+						for (const i in coaches) {
+							coachList.push(coaches[i].name);	
+						}
+						res.render('create-sessions', {coachList: coachList, coacheeList: coacheeList, name: req.user.first});
+					}
+				});
+			}
+		});
+	} else {
+		res.redirect('/');
+	}
+});
+
+app.post('/create-sessions', function(req, res) {
+	const queryObject = {name: req.body.coach};
+	
+	User.find(queryObject, function(err, coach) {
+		if (err) {
+			console.log("Can't access User database");
+		} else {
+			const session = {
+				coach: coach._id,
+				coachee: req.body.coachee,
+				date: req.body.date,
+				sessionNum: 1, 
+				totalNum: req.body.totalNum,
+				sessionDate: req.body.sessionDate,
+				canceled: false,
+				status: true
+			}
+			console.log(session);
+			
+			Session.create(session, (err) => {
+				if (err) {
+					res.send(err);	
+				} else {
+					res.redirect('/sessions');
+				}
+			});
+		}
+	});
 });
 
 app.listen(process.env.PORT || 3000);
