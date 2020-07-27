@@ -1,0 +1,48 @@
+<link rel="stylesheet" type="text/css" href="../css/menu.css"/>
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,800,300" rel="stylesheet" type="text/css" />
+<h1 id="welcome">Welcome {{name}}!</h1>
+<nav class="nav">
+    <ul class="nav__menu">
+        <li class="nav__menu-item"><a href="/menu-coach">Home</a></li>
+        <li class="nav__menu-item active"><a href="/view">View Sessions</a></li>
+        <li class="nav__menu-item"><a href="/update">Update Session</a></li>
+        <li class="nav__menu-item"><a href="/logout">Sign Out</a></li>
+    </ul>
+</nav>
+
+<link rel="stylesheet" type="text/css" href="../css/update.css"/>
+<!-- https://codepen.io/freeCodeCamp/pen/VPaoNP -->
+<div class="container">
+    <link rel="stylesheet" type="text/css" href="../css/table.css"/>
+    <div class="card rounded shadow border-0">
+        <div class="card-body p-5 bg-white rounded">
+            <div class="table-responsive">
+                <table id="example" style="width:100%" class="table table-striped table-bordered">
+                    <header class="text-center">
+                        <h1 class="display-4"></h1>
+                    </header>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Coach</th>
+                            <th>Coachee</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each sessionList}}
+                        <tr>
+                            <td>{{sessionNum}}</td>
+                            <td>{{coach}}</td>
+                            <td>{{coachee}}</td>
+                            <td>{{status}}</td>
+                            <td>{{date}}</td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

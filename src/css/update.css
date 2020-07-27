@@ -178,6 +178,16 @@ form {
   cursor: pointer;
 }
 
+.adjacent-button {
+  display: inline;
+  width: 45%;
+  padding: 0.75rem;
+  background: var(--color-green);
+  color: inherit;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
 .autocomplete {
   /*the container must be positioned relative:*/
   position: relative;

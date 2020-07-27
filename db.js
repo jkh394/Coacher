@@ -34,24 +34,31 @@ const coacheeSchema = new mongoose.Schema({
 	dateAssigned: {type: Date}
 });
 
-//session schema for each coach/user
-const sessionSchema = new mongoose.Schema({
-	coach: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
-	coachee: {type: String, ref: 'Coachee'},
-	date: {type: Date},
+//individual session schema 
+const subSessionSchema = new mongoose.Schema({
+	sessionsID: {type: mongoose.Schema.Types.ObjectId, ref: 'Sessions'},
 	sessionNum: {type: Number},
-	totalNum: {type: Number},
 	sessionDate: {type: Date},
 	canceled: {type: Boolean},
 	cancelDate: {type: Date},
-	notes: {type: String},
-	status: {type: Boolean}
-	//User: {type: mongoose.Schema.Types.ObjectId, ref: 'User'} <- do i need this??
+	notes: {type: String}
+});
+
+//sessions schema for each coach/user
+const sessionsSchema = new mongoose.Schema({
+	sessionsID: {type: mongoose.Schema.Types.ObjectId},
+	coachID: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+	coachName: {type: String},
+	coachee: {type: String, ref: 'Coachee'},
+	totalNum: {type: Number},
+	status: {type: Boolean},
+	subSessions: [subSessionSchema]
 });
 
 mongoose.model('User', userSchema);
 mongoose.model('Coachee', coacheeSchema);
-mongoose.model('Session', sessionSchema);
+mongoose.model('Sessions', sessionsSchema);
+mongoose.model('subSession', subSessionSchema);
 
 // is the environment variable, NODE_ENV, set to PRODUCTION? 
 let dbconf;

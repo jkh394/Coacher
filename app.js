@@ -42,7 +42,8 @@ app.use(session({secret: 'secret for signing session id', saveUninitialized: fal
 
 const User = mongoose.model('User');
 const Coachee = mongoose.model('Coachee');
-const Session = mongoose.model('Session');
+const Sessions = mongoose.model('Sessions');
+const SubSession = mongoose.model('subSession');
 mongoose.set('useNewUrlParser', true);
 mongoose.set('useFindAndModify', false);
 mongoose.set('useCreateIndex', true);
@@ -151,6 +152,14 @@ app.get('/menu-coach', function(req, res) {
 	}
 });
 
+app.get('/view', function(req, res) {
+	if (req.isAuthenticated()) {	
+		res.render('view', {name: req.user.first});
+	} else {
+		res.redirect('/');
+	}
+});
+
 app.get('/update', function(req, res) {
 	if (req.isAuthenticated()) {
 		res.render('update', {name: req.user.first});
@@ -247,15 +256,16 @@ app.post('/add-coachee', function(req, res) {
 });
 
 app.get('/sessions', function(req, res) {
-	console.log(req.query);
 	
 	if (req.isAuthenticated()) {
 		
-		User.find({}, function(err, coaches) {
+		const queryObject = {};
+		
+		User.find(queryObject, function(err, coaches) {
 			if (err) {
 				console.log("Can't access User database");
 			} else {
-				Coachee.find({}, function(err, coachees) {
+				Coachee.find(queryObject, function(err, coachees) {
 					if (err) {
 						console.log("Can't access Coachee database");
 					} else {
@@ -267,38 +277,33 @@ app.get('/sessions', function(req, res) {
 						for (const i in coaches) {
 							coachList.push(coaches[i].name);	
 						}
-						console.log(coacheeList);
 						
-						const queryObject = {name: req.query.coach};
-						User.find(queryObject, function(err, coach) {
-							if (err) {
-								console.log("Can't access User database");
-							} else {
-								const queryObject2 = {coach: coach._id, coachee: req.query.coachee}
-								Session.find(queryObject2, function(err, sessions) {
-									if (err) {
-										console.log("Can't access Session database");
-									} else {
-										const sessionList = [];
-										for (const i in sessions) {
-											const session = {
-												sessionNum: sessions[i].sessionNum,	
-												coach: req.query.coach,
-												coachee: sessions[i].coachee,
-												status: sessions[i].status,
-												date: sessions[i].sessionDate
-											}
-											sessionList.push(session);
-										}
-										res.render('sessions', {coachList: coachList, coacheeList: coacheeList, name: req.user.first, sessionList: sessionList});
-									}
-								});
+						let queryObject2 = {};
+						if (req.query.coach) {
+							queryObject2.coachName = req.query.coach;
+						}
+						if (req.query.coachee) {
+							queryObject2.coachee = req.query.coachee;							
+						}
+
+						const sessionsList = [];
+						Sessions.find( queryObject2, function(err, sessions) {
+							for (const i in sessions) {
+								const session = {
+									coach: sessions[i].coachName,
+									coachee: sessions[i].coachee,
+									status: sessions[i].status,
+									totalNum: sessions[i].totalNum
+								}
+								sessionsList.push(session);
 							}
+							res.render('sessions', {coachList: coachList, coacheeList: coacheeList, name: req.user.first, sessionsList: sessionsList});							
 						});
 					}
 				});
 			}
 		});
+		
 	} else {
 		res.redirect('/');
 	}
@@ -337,31 +342,59 @@ app.get('/create-sessions', function(req, res) {
 app.post('/create-sessions', function(req, res) {
 	const queryObject = {name: req.body.coach};
 	
-	User.find(queryObject, function(err, coach) {
+	User.findOne(queryObject, function(err, coach) {
 		if (err) {
 			console.log("Can't access User database");
 		} else {
-			const session = {
-				coach: coach._id,
-				coachee: req.body.coachee,
-				date: req.body.date,
-				sessionNum: 1, 
-				totalNum: req.body.totalNum,
-				sessionDate: req.body.sessionDate,
-				canceled: false,
-				status: true
-			}
-			console.log(session);
 			
-			Session.create(session, (err) => {
-				if (err) {
-					res.send(err);	
+			const sessionsID = new mongoose.Types.ObjectId();
+			const sessions = {
+				sessionsID: sessionsID,
+				coachID: coach._id,
+				coachName: coach.name,
+				coachee: req.body.coachee,
+				totalNum: req.body.totalNum,
+				status: true,
+				subSessions: []
+			}
+			
+			let subSessionsList = [];
+			for (let i = 0; i < req.body.totalNum; i++) {
+				let subSession = {};
+				if (i === 0) {
+					subSession = {
+						sessionsID: sessionsID,
+						sessionNum: i + 1,
+						sessionDate: req.body.sessionDate
+					}
 				} else {
-					res.redirect('/sessions');
+					subSession = {
+						sessionsID: sessionsID,
+						sessionNum: i + 1
+					}
+				}
+				SubSession.create(subSession, (err) => {
+					if (err) {
+						console.log("Error creating subSession");
+					}
+				});
+				
+				subSessionsList.push(subSession);
+			}
+			
+			Sessions.create(sessions, (err) => {
+				if (err) {
+					console.log("Error creating sessions");
+				} else {
+					//add object to mongo array https://stackoverflow.com/questions/33049707/push-items-into-mongo-array-via-mongoose
+					subSessionsList.forEach(subSession => sessions.subSessions.push(subSession));
 				}
 			});
+			
+			res.redirect('/sessions');
 		}
 	});
+	
 });
 
 app.listen(process.env.PORT || 3000);
