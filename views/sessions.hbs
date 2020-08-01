@@ -1,7 +1,7 @@
 <link rel="stylesheet" type="text/css" href="../css/menu.css"/>
 <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,800,300" rel="stylesheet" type="text/css" />
 <h1 id="welcome">Welcome {{name}}!</h1>
-<nav class="nav">
+<nav class="nav admin">
     <ul class="nav__menu">
         <li class="nav__menu-item"><a href="/menu-admin">Home</a></li>
         <li class="nav__menu-item"><a href="/coaches">Coaches</a></li>
@@ -11,7 +11,7 @@
                 <li class="nav__submenu-item"> <a href="/add-coachee">Add Coachee</a></li>
             </ul>
         </li>
-        <li class="nav__menu-item">
+        <li class="nav__menu-item active">
             <a href="/sessions">Sessions</a>
             <ul class="nav__submenu">
                 <li class="nav__submenu-item active"> <a href="/create-sessions">Create Sessions</a></li>
@@ -28,6 +28,7 @@
         <h1 id="title" class="text-center">View Coaching Sessions</h1>
         <p id="description" class="description text-center">Fill out information below to find coaching sessions for a specific coach and/or coachee.</p>
         <hr style="border-color:white;">
+        
         <div class="form-group">
             <label id="name-label" for="name">Coach Name</label>
             <div class="autocomplete" style="width:300px;">
@@ -68,6 +69,7 @@
                                 <th>Coachee</th>
                                 <th>Status</th>
                                 <th># of Sessions</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -75,8 +77,20 @@
                             <tr data-status="{{status}}">
                                 <td>{{coach}}</td>
                                 <td>{{coachee}}</td>
-                                <td>{{status}}</td>
+                                {{#if status}}
+                                <td><p style="color:blue;">active</p></td>
+                                {{else}}
+                                <td><p style="color:gray;">completed</p></td>
+                                {{/if}}
                                 <td>{{totalNum}}</td>
+                                <td>
+                                    <a href="/edit-sessions?sessionsID={{sessionsID}}" class="btn btn-success">
+                                        <img src="https://simpleicon.com/wp-content/uploads/pencil-256x256.png" style="width: 20%;"></img> Edit
+                                    </a>
+                                    <a href="/sessions-log?sessionsID={{sessionsID}}" class="btn btn-warning">
+                                        <img src="https://opengameart.org/sites/default/files/Magnifying%20Glass%20Tester.png" style="width: 20%;"></img> View
+                                    </a>
+                                </td>
                             </tr>
                             {{/each}}
                         </tbody>
@@ -86,6 +100,7 @@
         </div>
     </form>
 </div>
+
 <script>
     const coachList = {{{json coachList}}};
     const coacheeList = {{{json coacheeList}}};

@@ -1,12 +1,10 @@
 <link rel="stylesheet" type="text/css" href="../css/menu.css"/>
 <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,800,300" rel="stylesheet" type="text/css" />
-
 <h1 id="welcome">Welcome {{name}}!</h1>
-<nav class="nav">
+<nav class="nav coach">
     <ul class="nav__menu">
         <li class="nav__menu-item"><a href="/menu-coach">Home</a></li>
-		<li class="nav__menu-item"><a href="/view">View Sessions</a></li>
-        <li class="nav__menu-item active"><a href="/update">Update Session</a></li>
+        <li class="nav__menu-item active"><a href="/view">View Sessions</a></li>
         <li class="nav__menu-item"><a href="/logout">Sign Out</a></li>
     </ul>
 </nav>
@@ -16,20 +14,20 @@
 
 <div class="container">
 
-    <form id="survey-form">
+    <form id="survey-form" action="/update" method="POST">
 	
-		<h1 id="title" class="text-center">Coaching Session Form</h1>
-        <p id="description" class="description text-center">Please answer the following questions about the coaching session held on [date].</p>
+		<h2 id="title" class="text-center">Session Log: {{log.sessionDate}}</h2>
+        <p id="description" class="description text-center">Please answer the following questions about the coaching session..</p>
 	
 		<hr style="border-color:white;">
 	
 		<div class="form-group">
             <p>Did the session take place?</p>
             <label>
-				<input id="Yes" name="tookPlace" value="Yes" type="radio" class="input-radio"/>Yes
+				<input id="Yes" name="canceled" value="false" type="radio" class="input-radio"/>Yes
 			</label>
             <label>
-				<input id="No" name="tookPlace" value="No" type="radio" class="input-radio"/> No
+				<input id="No" name="canceled" value="true" type="radio" class="input-radio"/>No
 			</label>
         </div>
 		
@@ -37,17 +35,17 @@
 			<div class="form-group">
 				<p>Was the session cancelled 24 hours in advance?</p>
 				<label>
-					<input name="canceled" value="Yes" type="radio" class="input-radio"/>Yes
+					<input name="advance" value="true" type="radio" class="input-radio"/>Yes
 				</label>
 				<label>
-					<input name="canceled" value="No" type="radio" class="input-radio"/> No
+					<input name="advance" value="false" type="radio" class="input-radio"/>No
 				</label>
 			</div>
 			
 			<div class="form-group">
 				<p>Please record the rescheduled session date.</p>
 				<label>
-					<input class="cancelDate" type="date" value="2020-01-01" id="example-date-input">
+					<input name="cancelDate" type="date" id="name" class="form-control">
 				</label>
 			</div>
 		</div>
@@ -61,6 +59,26 @@
                 placeholder="Enter any notes here..."
                 ></textarea>
         </div>
+		
+		<div class="form-group" id="lastDiv">
+            <p>Is this the last session?</p>
+            <label>
+				<input id="yesLast" name="last" value="true" type="radio" class="input-radio"/>Yes
+			</label>
+            <label>
+				<input id="noLast" name="last" value="false" type="radio" class="input-radio"/>No
+			</label>
+        </div>
+		
+		<div class="form-group" id="nextDiv">
+				<p>When is the next session to be held?</p>
+				<label>
+					<input name="nextDate" type="date"  id="name" class="form-control">
+				</label>
+		</div>
+		
+		<input class="button" type="hidden" name="sessionNum" value="{{sessionNum}}"></input>
+		<input class="button" type="hidden" name="sessionsID" value="{{sessionsID}}"></input>
 		
         <div class="form-group">
             <button type="submit" id="submit" class="submit-button">

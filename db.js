@@ -6,13 +6,12 @@ const bcrypt = require('bcrypt');
 
 //coach/user schema for Passport authentication
 const userSchema = new mongoose.Schema({
-	_id: mongoose.Schema.Types.ObjectId,
-	username: {type: String, required: true, unique: true}, //email is username
+	username: {type: String, required: true, index: {unique: true, dropDups: true}}, //email is username
 	passwordHash: {type: String, required: true},
-	first: {type: String},
-	last: {type: String},
+	first: {type: String, required: true},
+	last: {type: String, required: true},
 	name: {type: String},
-	phone: {type: String}
+	phone: {type: String, required: true}
 });
 
 userSchema.plugin(uniqueValidator);
@@ -39,20 +38,22 @@ const subSessionSchema = new mongoose.Schema({
 	sessionsID: {type: mongoose.Schema.Types.ObjectId, ref: 'Sessions'},
 	sessionNum: {type: Number},
 	sessionDate: {type: Date},
-	canceled: {type: Boolean},
+	canceled: {type: Boolean, "default": false},
 	cancelDate: {type: Date},
+	advance: {type: Boolean, "default": false},
+	logged: {type: Boolean, "default": false},
+	last: {type: Boolean, "default": false},
 	notes: {type: String}
 });
 
 //sessions schema for each coach/user
 const sessionsSchema = new mongoose.Schema({
 	sessionsID: {type: mongoose.Schema.Types.ObjectId},
-	coachID: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
-	coachName: {type: String},
+	coach: {type: String, ref: 'User'},
 	coachee: {type: String, ref: 'Coachee'},
 	totalNum: {type: Number},
 	status: {type: Boolean},
-	subSessions: [subSessionSchema]
+	subSessions: {type: Array, "default": []}
 });
 
 mongoose.model('User', userSchema);

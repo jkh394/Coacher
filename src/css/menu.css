@@ -21,7 +21,6 @@ body {
 	 text-align: center;
 }
  .nav {
-	 width: 550px;
 	 margin: 0 auto;
 	 background: #27ae60;
 	 color: #f0f0f0;
@@ -67,3 +66,10 @@ body {
 	 display: !important;
 }
  
+ .coach {
+	width: 350px;
+ }
+ 
+ .admin {
+	 width: 540px;
+ }

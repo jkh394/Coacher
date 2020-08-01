@@ -21,6 +21,9 @@ const saltRounds = 15;
 
 const expressHbs =  require('express-handlebars');
 
+//https://github.com/caolan/async
+const async = require('async');
+
 //===set up app==================================================
 //https://stackoverflow.com/questions/30767928/accessing-handlebars-variable-via-javascript
 const hbs = expressHbs.create({
@@ -106,8 +109,7 @@ app.get('/register', (req, res) => {
 app.post('/register', (req, res, next) => {
 	const { first, last, password, username, phone } = req.body;
 	const name = first + " " + last;
-	const _id = new mongoose.Types.ObjectId();
-	User.create( {_id, username, password, first, last, name, phone} )
+	User.create( {username, password, first, last, name, phone} )
 		.then(user => {
 			req.login(user, err => {
 				if (err) {
@@ -154,7 +156,22 @@ app.get('/menu-coach', function(req, res) {
 
 app.get('/view', function(req, res) {
 	if (req.isAuthenticated()) {	
-		res.render('view', {name: req.user.first});
+	
+		const queryObject = {coach: req.user.name};
+
+		Sessions.find(queryObject, function(err, sessions) {
+			const sessionsList = [];
+			for (const i in sessions) {
+				const session = {
+					sessionsID: sessions[i].sessionsID,
+					coachee: sessions[i].coachee,
+					status: sessions[i].status,
+					totalNum: sessions[i].totalNum
+				}
+				sessionsList.push(session);
+			}
+			res.render('view', {name: req.user.first, sessionsList: sessionsList});
+		});
 	} else {
 		res.redirect('/');
 	}
@@ -162,7 +179,136 @@ app.get('/view', function(req, res) {
 
 app.get('/update', function(req, res) {
 	if (req.isAuthenticated()) {
-		res.render('update', {name: req.user.first});
+		
+		const queryObject = {sessionsID: req.query.sessionsID, sessionNum: req.query.sessionNum};
+		SubSession.findOne(queryObject, function(err, subSession) {
+			const log = {};
+			if(subSession.sessionDate) {
+					log.sessionDate = subSession.sessionDate.toDateString()
+			}
+			res.render('update', {name: req.user.first, sessionsID: req.query.sessionsID, sessionNum: req.query.sessionNum, log: log});
+		});
+
+	} else {
+		res.redirect('/');
+	}
+});
+
+app.post('/update', function(req, res) {
+	
+	async.waterfall([
+		function(callback) {
+			const queryObject = {
+				sessionsID: req.body.sessionsID, 
+				sessionNum: req.body.sessionNum
+			};
+			const newData = {};
+			if (req.body.canceled) {
+				newData.canceled = (req.body.canceled === 'true');
+			}
+			if (req.body.advance) {
+				newData.advance = (req.body.advance === 'true');
+			}
+			if (req.body.cancelDate) {
+				const cancelDate = new Date(req.body.cancelDate + " ");
+				newData.cancelDate = cancelDate;
+			}
+			if (req.body.notes) {
+				newData.notes = req.body.notes;
+			}
+			if (req.body.last === "true") {
+				newData.last = true;
+			}
+			newData.logged = true;
+
+			SubSession.findOneAndUpdate(queryObject, newData, {upsert: false}, function(err, updateLog) {
+				if (err) return res.send(500, {error: err});
+				
+				if (req.body.nextDate || req.body.cancelDate) {
+					let date;
+					if (req.body.nextDate) {
+						date = req.body.nextDate;
+					} else {
+						date = req.body.cancelDate;
+					}
+					const queryObject2 = {
+						sessionsID: req.body.sessionsID,
+						sessionNum: parseInt(req.body.sessionNum) + 1
+					};
+
+					const dateObj	= new Date(date + " ");
+					const newData2 = { sessionDate: dateObj };
+					SubSession.findOneAndUpdate(queryObject2, newData2, {upsert: true}, function(err, updateLog) {
+						if (err) return res.send(500, {error: err});
+						callback(null, updateLog);
+					});
+				} else {
+					callback(null, updateLog);
+				}
+			});
+		},
+		function(callback) {
+			const queryObject = {sessionsID: req.body.sessionsID};
+			SubSession.find(queryObject, function(err, logs) {
+				const newData = {subSessions: logs};
+				if(req.body.last === "true") {
+					newData.status = false;
+				}
+				Sessions.findOneAndUpdate(queryObject, newData, {upsert: false}, function(err, updateSessions) {
+					if (err) return res.send(500, {error: err});
+
+					const url = '/logs?sessionsID=' + req.body.sessionsID;
+					res.redirect(url);
+				});	
+			});
+		}
+	], function(err, results) {});
+});
+
+app.get('/logs', function(req, res) {
+	if (req.isAuthenticated()) {
+		
+		const queryObject = {sessionsID: req.query.sessionsID};
+		
+		Sessions.findOne(queryObject, function(err, sessions) {
+			if (err) {
+				console.log('Unable to access Sessions database');
+			} else {
+				User.findOne({name: sessions.coach}, function(err, coach) {
+					if (err) console.log('Unable to access User database');
+					Coachee.findOne({name: sessions.coachee}, function(err, coachee) {
+						if (err) console.log('Unable to access Coachee database');
+							const coachObj = {
+								name: sessions.coach, 
+								phone: coach.phone, 
+								email: coach.username,
+							}
+							const coacheeObj = {
+								name: sessions.coachee,
+								phone: coachee.phone,
+								email: coachee.email								
+							}
+							const sessionsLogs = [];
+							for (const i in sessions.subSessions) {
+								const log = {
+									sessionsID: sessions.subSessions[i].sessionsID,
+									sessionNum: sessions.subSessions[i].sessionNum,
+									canceled: sessions.subSessions[i].canceled,
+									advance: sessions.subSessions[i].advance, 
+									logged: sessions.subSessions[i].logged, 
+									last: sessions.subSessions[i].last,
+									notes: sessions.subSessions[i].notes
+								}
+								if (sessions.subSessions[i].sessionDate) {
+									log.sessionDate = sessions.subSessions[i].sessionDate.toDateString();
+								}
+								sessionsLogs.push(log);
+							}
+							res.render('logs', {name: req.user.first, sessionsID: req.query.sessionsID, coach: coachObj, coachee: coacheeObj, logs: sessionsLogs});
+					});
+				});
+			}
+		});
 	} else {
 		res.redirect('/');
 	}
@@ -258,7 +404,6 @@ app.post('/add-coachee', function(req, res) {
 app.get('/sessions', function(req, res) {
 	
 	if (req.isAuthenticated()) {
-		
 		const queryObject = {};
 		
 		User.find(queryObject, function(err, coaches) {
@@ -280,7 +425,7 @@ app.get('/sessions', function(req, res) {
 						
 						let queryObject2 = {};
 						if (req.query.coach) {
-							queryObject2.coachName = req.query.coach;
+							queryObject2.coach = req.query.coach;
 						}
 						if (req.query.coachee) {
 							queryObject2.coachee = req.query.coachee;							
@@ -290,7 +435,8 @@ app.get('/sessions', function(req, res) {
 						Sessions.find( queryObject2, function(err, sessions) {
 							for (const i in sessions) {
 								const session = {
-									coach: sessions[i].coachName,
+									sessionsID: sessions[i].sessionsID,
+									coach: sessions[i].coach,
 									coachee: sessions[i].coachee,
 									status: sessions[i].status,
 									totalNum: sessions[i].totalNum
@@ -303,12 +449,44 @@ app.get('/sessions', function(req, res) {
 				});
 			}
 		});
-		
 	} else {
 		res.redirect('/');
 	}
 });
 
+app.post('/sessions', function(req, res) {
+	if (req.isAuthenticated()) {
+		const queryObject = {sessionsID: req.body.sessionsID};
+		
+		Sessions.findOne(queryObject, function(err, sessions) {
+			if (err) {
+				console.log('Unable to access Sessions database');
+			} else {
+				const queryObject2 = {sessionsID: req.body.sessionsID};
+				const newData = {};
+				if (req.body.coach) {
+					newData.coach = req.body.coach;
+				}
+				if (req.body.coachee) {
+					newData.coachee = req.body.coachee;
+				}
+				if (req.body.totalNum) {
+					newData.totalNum = req.body.totalNum;
+				}
+				if (req.body.status !== sessions.status.toString()) {
+					newData.status = (req.body.status === 'true');
+				}
+				Sessions.findOneAndUpdate(queryObject2, newData, {upsert: false}, function(err, updateSessions) {
+					if (err) return res.send(500, {error: err});
+					res.redirect('/sessions');
+				});	
+			}
+		});
+	} else {
+		res.redirect('/');
+	}
+});	
+	
 app.get('/create-sessions', function(req, res) {
 	if (req.isAuthenticated()) {
 		const queryObject = {};
@@ -346,12 +524,10 @@ app.post('/create-sessions', function(req, res) {
 		if (err) {
 			console.log("Can't access User database");
 		} else {
-			
 			const sessionsID = new mongoose.Types.ObjectId();
 			const sessions = {
 				sessionsID: sessionsID,
-				coachID: coach._id,
-				coachName: coach.name,
+				coach: coach.name,
 				coachee: req.body.coachee,
 				totalNum: req.body.totalNum,
 				status: true,
@@ -362,15 +538,16 @@ app.post('/create-sessions', function(req, res) {
 			for (let i = 0; i < req.body.totalNum; i++) {
 				let subSession = {};
 				if (i === 0) {
+					const sessionDate = new Date(req.body.sessionDate + " ");
 					subSession = {
 						sessionsID: sessionsID,
 						sessionNum: i + 1,
-						sessionDate: req.body.sessionDate
+						sessionDate: sessionDate,
 					}
 				} else {
 					subSession = {
 						sessionsID: sessionsID,
-						sessionNum: i + 1
+						sessionNum: i + 1, 
 					}
 				}
 				SubSession.create(subSession, (err) => {
@@ -382,19 +559,119 @@ app.post('/create-sessions', function(req, res) {
 				subSessionsList.push(subSession);
 			}
 			
-			Sessions.create(sessions, (err) => {
-				if (err) {
-					console.log("Error creating sessions");
-				} else {
-					//add object to mongo array https://stackoverflow.com/questions/33049707/push-items-into-mongo-array-via-mongoose
-					subSessionsList.forEach(subSession => sessions.subSessions.push(subSession));
+			//https://stackoverflow.com/questions/40269584/async-callback-is-not-a-function
+			async.waterfall([
+				function (callback) {
+					Sessions.create(sessions, function(err, newSession) {
+						callback(null, newSession);
+					})
+				}, 
+				function (newSession, callback) {
+					const newData = { subSessions: subSessionsList };
+					Sessions.findOneAndUpdate({sessionsID: newSession.sessionsID}, newData, {upsert: false}, function(err, updateSessions) {
+						if (err) return res.send(500, {error: err});
+						callback(updateSessions);
+					});	
 				}
-			});
+			], function(err, results) {});
 			
 			res.redirect('/sessions');
 		}
 	});
 	
+});
+
+app.get('/edit-sessions', function(req, res) {
+	if (req.isAuthenticated()) {
+		const queryObject = {};
+		
+		User.find(queryObject, function(err, coaches) {
+				if (err) {
+					console.log("Can't access User database");
+				} else {
+					Coachee.find(queryObject, function(err, coachees) {
+						if (err) {
+							console.log("Can't access Coachee database");
+						} else {
+							const coachList = [];
+							const coacheeList = [];
+							for (const i in coachees) {
+								coacheeList.push(coachees[i].name);
+							}
+							for (const i in coaches) {
+								coachList.push(coaches[i].name);	
+							}
+							
+							const queryObject2 = {sessionsID: req.query.sessionsID};
+							Sessions.findOne(queryObject2, function (err, sessions) {
+								if (err) {
+									console.log("Unable to find sessions");
+								} else {
+									const sessionsObject = {
+										sessionsID: sessions.sessionsID,
+										coach: sessions.coach,
+										coachee: sessions.coachee,
+										totalNum: sessions.totalNum,
+										status: sessions.status
+									};
+									res.render('edit-sessions', {coachList: coachList, coacheeList: coacheeList, name: req.user.first, sessions: sessionsObject});
+								}
+							});
+						}
+					});
+				}
+			});
+	} else {
+		res.redirect('/sessions');
+	}
+});
+
+app.get('/sessions-log', function(req, res) {
+	if (req.isAuthenticated()) {
+		const queryObject = {sessionsID: req.query.sessionsID};
+		
+		Sessions.findOne(queryObject, function(err, sessions) {
+			if (err) {
+				console.log('Unable to access Sessions database');
+			} else {
+				User.findOne({name: sessions.coach}, function(err, coach) {
+					if (err) console.log('Unable to access User database');
+					Coachee.findOne({name: sessions.coachee}, function(err, coachee) {
+						if (err) console.log('Unable to access Coachee database');
+							const coachObj = {
+								name: sessions.coach, 
+								phone: coach.phone, 
+								email: coach.username,
+							}
+							const coacheeObj = {
+								name: sessions.coachee,
+								phone: coachee.phone,
+								email: coachee.email								
+							}
+							const sessionsLogs = [];
+							for (const i in sessions.subSessions) {
+								const log = {
+									sessionsID: sessions.subSessions[i].sessionsID,
+									sessionNum: sessions.subSessions[i].sessionNum,
+									canceled: sessions.subSessions[i].canceled,
+									advance: sessions.subSessions[i].advance, 
+									logged: sessions.subSessions[i].logged, 
+									last: sessions.subSessions[i].last,
+									notes: sessions.subSessions[i].notes
+								}
+								if (sessions.subSessions[i].sessionDate) {
+									log.sessionDate = sessions.subSessions[i].sessionDate.toDateString();
+								}
+								sessionsLogs.push(log);
+							}
+							res.render('sessions-log', {name: req.user.first, sessionsID: req.query.sessionsID, coach: coachObj, coachee: coacheeObj, logs: sessionsLogs});
+					});
+				});
+			}
+		});
+	} else {
+		res.redirect('/');
+	}
 });
 
 app.listen(process.env.PORT || 3000);

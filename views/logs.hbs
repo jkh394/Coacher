@@ -1,0 +1,69 @@
+<link rel="stylesheet" type="text/css" href="../css/menu.css"/>
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,800,300" rel="stylesheet" type="text/css" />
+<h1 id="welcome">Welcome {{name}}!</h1>
+<nav class="nav coach">
+    <ul class="nav__menu">
+        <li class="nav__menu-item"><a href="/menu-coach">Home</a></li>
+        <li class="nav__menu-item active"><a href="/view">View Sessions</a></li>
+        <li class="nav__menu-item"><a href="/logout">Sign Out</a></li>
+    </ul>
+</nav>
+
+<link rel="stylesheet" type="text/css" href="../css/modal.css"/>
+<div class="container">
+	<div class="shadow">
+    
+	<h1 id="title" class="text-center">View Session Logs</h1>
+    <p id="description" class="description text-center">View logs of coaching sessions below.</p>
+	
+	<div class="card" id="bio" style="width:45%; padding: 3%; display: inline-block; margin-left: 3%">
+		<h5 class="card-title">Coach Info</h5>
+		<div class="card-body bg-light scroll">
+			<p>Name: <b>{{coach.name}}</b></p>
+			<p>Phone: <b>{{coach.phone}}</b></p>
+			<p>Email: <b>{{coach.email}}</b></p>
+	  </div>
+	</div>
+	
+	<div class="card" id="bio" style="width:45%; padding: 3%; display: inline-block; margin-left: 3%">
+		<h5 class="card-title">Coachee Info</h5>
+		<div class="card-body bg-light scroll">
+			<p>Name: <b>{{coachee.name}}</b></p>
+			<p>Phone: <b>{{coachee.phone}}</b></p>
+			<p>Email: <b>{{coachee.email}}</b></p>
+	  </div>
+	</div>
+	
+    <hr style="border-color:white;">
+	
+	{{#each logs}}
+		<div class="card">
+			<div class="card-body">
+				<a href="/update?sessionsID={{sessionsID}}&sessionNum={{sessionNum}} " class="btn btn-success" style="width: 40%; margin-left: 15%; float: right;">
+					<img src="https://simpleicon.com/wp-content/uploads/pencil-256x256.png" style="width: 20%;"></img> Update Log
+				</a>
+				<br>
+				
+				<h5 class="card-title">Log #{{sessionNum}}: <br> <b>{{sessionDate}}</b></h5> 
+				<hr>
+				
+				{{#if canceled}}
+					<h5><span class="badge badge-danger">Session Canceled</span></h5>
+				{{else if logged}}
+					<h5><span class="badge badge-success">Session Took Place</span></h5>
+				{{else}}
+					<h5><span class="badge badge-primary">Session Pending</span></h5>
+				{{/if}}
+				{{#if last}}
+					<h5><span class="badge badge-secondary">Last Session</span></h5>
+				{{/if}}
+				<br>
+				
+				<b>Notes/Comments:</b> 
+				<div class="card-body bg-light">{{notes}}</div>
+		  </div>
+		</div>
+	{{/each}}
+	
+	</div>
+</div>
