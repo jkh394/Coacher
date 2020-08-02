@@ -135,11 +135,16 @@ app.all('/logout', function(req, res) {
 
 app.get('/redirect', function(req, res) {
 	if (req.isAuthenticated()) {
-		if(req.user.username === "admin@email"){
-			res.redirect('/menu-admin');
-		} else {
-			res.redirect('/menu-coach');
-		}
+		
+		const queryObject = {username: req.user.username};
+		User.findOne(queryObject, function(err, user) {
+			if (err) console.log('Unable to find user');
+			if(user.admin === true){
+				res.redirect('/menu-admin');
+			} else {
+				res.redirect('/menu-coach');
+			}
+		});
 	} else {
 		res.redirect('/');
 	}
@@ -231,6 +236,12 @@ app.post('/update', function(req, res) {
 					} else {
 						date = req.body.cancelDate;
 					}
+					
+					/*schedule email*/
+					const mailOptions = {
+						
+					};
+					
 					const queryObject2 = {
 						sessionsID: req.body.sessionsID,
 						sessionNum: parseInt(req.body.sessionNum) + 1
@@ -325,7 +336,7 @@ app.get('/menu-admin', function(req, res) {
 
 app.get('/coaches', function(req, res) {
 	if (req.isAuthenticated()) {
-		const queryObject = {};
+		const queryObject = {admin: false};
 		
 		User.find(queryObject, function(err, result) {
 			if (err) {
@@ -404,13 +415,13 @@ app.post('/add-coachee', function(req, res) {
 app.get('/sessions', function(req, res) {
 	
 	if (req.isAuthenticated()) {
-		const queryObject = {};
+		const queryObject = {admin: false};
 		
 		User.find(queryObject, function(err, coaches) {
 			if (err) {
 				console.log("Can't access User database");
 			} else {
-				Coachee.find(queryObject, function(err, coachees) {
+				Coachee.find({}, function(err, coachees) {
 					if (err) {
 						console.log("Can't access Coachee database");
 					} else {
@@ -489,13 +500,13 @@ app.post('/sessions', function(req, res) {
 	
 app.get('/create-sessions', function(req, res) {
 	if (req.isAuthenticated()) {
-		const queryObject = {};
+		const queryObject = {admin: false};
 		
 		User.find(queryObject, function(err, coaches) {
 			if (err) {
 				console.log("Can't access User database");
 			} else {
-				Coachee.find(queryObject, function(err, coachees) {
+				Coachee.find({}, function(err, coachees) {
 					if (err) {
 						console.log("Can't access Coachee database");
 					} else {
@@ -583,13 +594,13 @@ app.post('/create-sessions', function(req, res) {
 
 app.get('/edit-sessions', function(req, res) {
 	if (req.isAuthenticated()) {
-		const queryObject = {};
+		const queryObject = {admin: false};
 		
 		User.find(queryObject, function(err, coaches) {
 				if (err) {
 					console.log("Can't access User database");
 				} else {
-					Coachee.find(queryObject, function(err, coachees) {
+					Coachee.find({}, function(err, coachees) {
 						if (err) {
 							console.log("Can't access Coachee database");
 						} else {

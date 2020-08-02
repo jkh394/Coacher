@@ -11,7 +11,8 @@ const userSchema = new mongoose.Schema({
 	first: {type: String, required: true},
 	last: {type: String, required: true},
 	name: {type: String},
-	phone: {type: String, required: true}
+	phone: {type: String, required: true}, 
+	admin: {type: Boolean, "default": false}
 });
 
 userSchema.plugin(uniqueValidator);
