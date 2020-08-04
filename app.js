@@ -24,6 +24,13 @@ const expressHbs =  require('express-handlebars');
 //https://github.com/caolan/async
 const async = require('async');
 
+//https://blog.greenroots.info/send-and-schedule-e-mails-from-a-nodejs-app-ck0l6usms000v4ns1lft6lauw
+//https://stackoverflow.com/questions/48274326/running-cron-job-at-only-specific-date-and-time
+const nodemailer = require('nodemailer');
+const schedule = require('node-schedule');
+const { google } = require("googleapis");
+const OAuth2 = google.auth.OAuth2;
+
 //===set up app==================================================
 //https://stackoverflow.com/questions/30767928/accessing-handlebars-variable-via-javascript
 const hbs = expressHbs.create({
@@ -88,6 +95,23 @@ const loggedOutOnly = (req, res, next) => {
 	if (req.isUnauthenticated()) next();
 	else res.redirect('/coacher');
 };
+
+const authObj = {
+	type: "OAuth2",
+	clientID: "115849050944-0c7pll5ff7010ubd4qnq9asfs6f9n2ht.apps.googleusercontent.com",
+	clientSecret: "-UyjeGyt0Tx6RBjdwi7v7rpG",
+	refreshToken: "1//0455ozVzVKn3YCgYIARAAGAQSNwF-L9IrBIA3dqln1BbOmQdN40bl7wjzEBac36IoInX0jgbjLDdWfrlXm9h3-hoiTc_Q2cD6PM0"
+}
+const oauth2Client = new OAuth2 (
+	authObj.clientID, //ClientID
+	authObj.clientSecret, //Client Secret
+	"https://developers.google.com/oauthplayground" // Redirect URL
+);
+oauth2Client.setCredentials({
+	refresh_token: authObj.refreshToken	
+});
+let accessToken;
+
 
 //===app routes====================================================
 app.get('/', (req, res) => {
@@ -208,8 +232,10 @@ app.post('/update', function(req, res) {
 				sessionNum: req.body.sessionNum
 			};
 			const newData = {};
-			if (req.body.canceled) {
-				newData.canceled = (req.body.canceled === 'true');
+			if (req.body.canceled === "true") {
+				newData.canceled = true;
+			} else {
+				newData.canceled = false;
 			}
 			if (req.body.advance) {
 				newData.advance = (req.body.advance === 'true');
@@ -223,6 +249,8 @@ app.post('/update', function(req, res) {
 			}
 			if (req.body.last === "true") {
 				newData.last = true;
+			} else {
+				newData.last = false;	
 			}
 			newData.logged = true;
 
@@ -237,11 +265,6 @@ app.post('/update', function(req, res) {
 						date = req.body.cancelDate;
 					}
 					
-					/*schedule email*/
-					const mailOptions = {
-						
-					};
-					
 					const queryObject2 = {
 						sessionsID: req.body.sessionsID,
 						sessionNum: parseInt(req.body.sessionNum) + 1
@@ -251,26 +274,97 @@ app.post('/update', function(req, res) {
 					const newData2 = { sessionDate: dateObj };
 					SubSession.findOneAndUpdate(queryObject2, newData2, {upsert: true}, function(err, updateLog) {
 						if (err) return res.send(500, {error: err});
-						callback(null, updateLog);
+						SubSession.findOne({sessionsID: updateLog.sessionsID, sessionNum: updateLog.sessionNum}, function(err, nextLog) {
+							callback(null, nextLog);
+						});
 					});
 				} else {
-					callback(null, updateLog);
+					callback(null, null);
 				}
 			});
 		},
-		function(callback) {
+		function(nextLog, callback) {
 			const queryObject = {sessionsID: req.body.sessionsID};
 			SubSession.find(queryObject, function(err, logs) {
 				const newData = {subSessions: logs};
 				if(req.body.last === "true") {
 					newData.status = false;
+				} else {
+					newData.status = true;
 				}
 				Sessions.findOneAndUpdate(queryObject, newData, {upsert: false}, function(err, updateSessions) {
 					if (err) return res.send(500, {error: err});
-
-					const url = '/logs?sessionsID=' + req.body.sessionsID;
-					res.redirect(url);
+					callback(null, nextLog, updateSessions);
 				});	
+			});
+		}, 
+		function(nextLog, updateSessions, callback) {
+			User.findOne({admin:true}, function(err, admin) {
+				if (err) console.log('Unable to find admin user');
+					User.findOne({name: updateSessions.coach}, function(err, coach) {
+						Coachee.findOne({name: updateSessions.coachee}, function(err, coachee) {
+						
+							if(nextLog) {
+								//send email to remind coach to fill out session log
+								const sessionLogMailOptions = {
+									from: admin.username,
+									to: coach.username,
+									subject: 'Coaching Session Log Reminder',
+									generateTextFromHTML: true,
+									html: '<p>Hi ' + updateSessions.coach + ',&nbsp;</p>' + '<p>This is a small reminder to fill out the log for the coaching session that was held on ' + nextLog.sessionDate.toDateString() + ' with ' + updateSessions.coachee + '. You can access the coaching portal through the following link: <a href=\"https://www.standbesidethem.org/coacher\">https://www.standbesidethem.org/coacher</a>. If you have already filled out the log, please disregard this email. Thank you so much and we appreciate your dedication to our veterans!</p>' + '<p>Kind Regards,<br>The Stand Beside Them Team&nbsp;</p>'
+								};
+								//send mail to remind coach & coachee of upcoming session
+								const upcomingMailOptions = {
+									from: admin.username,
+									to: coach.username + "," + coachee.email,
+									subject: 'Upcoming Coaching Session Reminder',
+									generateTextFromHTML: true,
+									html: '<p>Hello,</p>' + '<p>This is a small reminder that there is an upcoming session between ' + updateSessions.coach + ' and ' + updateSessions.coachee + ' on  ' + nextLog.sessionDate.toDateString() + '.</p>' + '<p>Best,<br>Stand Beside Them</p>'
+								}
+								
+								if (!accessToken) {
+									accessToken = oauth2Client.getAccessToken();
+								}
+								const smtpTransport = nodemailer.createTransport({
+									service: "gmail", 
+									auth: {
+										type: authObj.type,
+										user: admin.username,
+										clientId: authObj.clientID,
+										clientSecret: authObj.clientSecret,
+										refreshToken: authObj.refreshToken,
+										accessToken: accessToken
+									}
+								});
+								
+								const beforeMS = nextLog.sessionDate.getTime() - 86400000;
+								const afterMS = nextLog.sessionDate.getTime() + 86400000;
+								const beforeDate = new Date(beforeMS);
+								const afterDate = new Date(afterMS);
+								schedule.scheduleJob(beforeDate, function() {
+									smtpTransport.sendMail(upcomingMailOptions, function(error, info) {
+										if (error) {
+											console.log('Error sending email: ', error);
+										} else {
+											console.log('Email sent: ' + info.response);	
+										}
+									});
+								});	
+								schedule.scheduleJob(afterDate, function() {
+									smtpTransport.sendMail(sessionLogMailOptions, function(error, info) {
+										if (error) {
+											console.log('Error sending email: ', error);
+										} else {
+											console.log('Email sent: ' + info.response);	
+										}
+									});
+								});
+							}
+							
+							const url = '/logs?sessionsID=' + req.body.sessionsID;
+							res.redirect(url);		
+						});
+					});
 			});
 		}
 	], function(err, results) {});
@@ -581,7 +675,68 @@ app.post('/create-sessions', function(req, res) {
 					const newData = { subSessions: subSessionsList };
 					Sessions.findOneAndUpdate({sessionsID: newSession.sessionsID}, newData, {upsert: false}, function(err, updateSessions) {
 						if (err) return res.send(500, {error: err});
-						callback(updateSessions);
+						User.findOne({admin: true}, function(err, admin) {
+							User.findOne({name: updateSessions.coach}, function(err, coach) {
+								Coachee.findOne({name: updateSessions.coachee}, function(err, coachee) {
+									//send email to remind coach to fill out session log after first session
+									const sessionLogMailOptions = {
+										from: admin.username,
+										to: coach.username,
+										subject: 'Coaching Session Log Reminder',
+										generateTextFromHTML: true,
+										html: '<p>Hi ' + updateSessions.coach + ',&nbsp;</p>' + '<p>This is a small reminder to fill out the log for the coaching session that was held on ' + subSessionsList[0].sessionDate.toDateString() + ' with ' + updateSessions.coachee + '. You can access the coaching portal through the following link: <a href=\"https://www.standbesidethem.org/coacher\">https://www.standbesidethem.org/coacher</a>. If you have already filled out the log, please disregard this email. Thank you so much and we appreciate your dedication to our veterans!</p>' + '<p>Kind Regards,<br>The Stand Beside Them Team&nbsp;</p>'
+									};
+									//send mail to remind coach & coachee of upcoming second session
+									const upcomingMailOptions = {
+										from: admin.username,
+										to: coach.username + "," + coachee.email,
+										subject: 'Upcoming Coaching Session Reminder',
+										generateTextFromHTML: true,
+										html: '<p>Hello,</p>' + '<p>This is a small reminder that there is an upcoming session between ' + updateSessions.coach + ' and ' + updateSessions.coachee + ' on  ' + subSessionsList[0].sessionDate.toDateString() + '.</p>' + '<p>Best,<br>Stand Beside Them</p>'
+									};
+									
+									if (!accessToken) {
+										accessToken = oauth2Client.getAccessToken();
+									}
+									const smtpTransport = nodemailer.createTransport({
+										service: "gmail", 
+										auth: {
+											type: authObj.type,
+											user: admin.username,
+											clientId: authObj.clientID,
+											clientSecret: authObj.clientSecret,
+											refreshToken: authObj.refreshToken,
+											accessToken: accessToken
+										}
+									});
+									
+									const beforeMS = subSessionsList[0].sessionDate.getTime() - 86400000;
+									const afterMS = subSessionsList[0].sessionDate.getTime() + 86400000;
+									const beforeDate = new Date(beforeMS);
+									const afterDate = new Date(afterMS);
+									
+									schedule.scheduleJob(beforeDate, function() {
+										smtpTransport.sendMail(upcomingMailOptions, function(error, info) {
+											if (error) {
+												console.log('Error sending email: ', error);
+											} else {
+												console.log('Email sent: ' + info.response);	
+											}
+										});
+									});	
+									schedule.scheduleJob(afterDate, function() {
+										smtpTransport.sendMail(sessionLogMailOptions, function(error, info) {
+											if (error) {
+												console.log('Error sending email: ', error);
+											} else {
+												console.log('Email sent: ' + info.response);	
+											}
+										});
+									});
+									
+								});
+							});
+						});	
 					});	
 				}
 			], function(err, results) {});

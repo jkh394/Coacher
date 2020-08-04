@@ -4,6 +4,11 @@ const passportLocalMongoose = require('passport-local-mongoose');
 const uniqueValidator = require('mongoose-unique-validator'); //allow enforcing unique constraints
 const bcrypt = require('bcrypt');
 
+const organizationSchema = new mongoose.Schema({
+	name: {type: String},
+	adminEmail: {type: String, ref: 'User'}
+});
+
 //coach/user schema for Passport authentication
 const userSchema = new mongoose.Schema({
 	username: {type: String, required: true, index: {unique: true, dropDups: true}}, //email is username
@@ -12,7 +17,8 @@ const userSchema = new mongoose.Schema({
 	last: {type: String, required: true},
 	name: {type: String},
 	phone: {type: String, required: true}, 
-	admin: {type: Boolean, "default": false}
+	admin: {type: Boolean, "default": false}, 
+	organization: {type: String, "default": "Stand Beside Them"}
 });
 
 userSchema.plugin(uniqueValidator);
@@ -31,7 +37,8 @@ const coacheeSchema = new mongoose.Schema({
 	name: {type: String},
 	phone: {type: String},
 	coach: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
-	dateAssigned: {type: Date}
+	dateAssigned: {type: Date},
+	organization: {type: String, "default": "Stand Beside Them"}
 });
 
 //individual session schema 
@@ -54,6 +61,7 @@ const sessionsSchema = new mongoose.Schema({
 	coachee: {type: String, ref: 'Coachee'},
 	totalNum: {type: Number},
 	status: {type: Boolean},
+	organization: {type: String, "default": "Stand Beside Them"},
 	subSessions: {type: Array, "default": []}
 });
 
