@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
 	name: {type: String},
 	phone: {type: String, required: true}, 
 	admin: {type: Boolean, "default": false}, 
-	organization: {type: String, "default": "Stand Beside Them"}
+	organization: {type: String, ref: 'Organization'}
 });
 
 userSchema.plugin(uniqueValidator);
@@ -36,9 +36,8 @@ const coacheeSchema = new mongoose.Schema({
 	last: {type: String},
 	name: {type: String},
 	phone: {type: String},
-	coach: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
 	dateAssigned: {type: Date},
-	organization: {type: String, "default": "Stand Beside Them"}
+	organization: {type: String, ref: 'Organization'}
 });
 
 //individual session schema 
@@ -61,7 +60,6 @@ const sessionsSchema = new mongoose.Schema({
 	coachee: {type: String, ref: 'Coachee'},
 	totalNum: {type: Number},
 	status: {type: Boolean},
-	organization: {type: String, "default": "Stand Beside Them"},
 	subSessions: {type: Array, "default": []}
 });
 
@@ -69,6 +67,7 @@ mongoose.model('User', userSchema);
 mongoose.model('Coachee', coacheeSchema);
 mongoose.model('Sessions', sessionsSchema);
 mongoose.model('subSession', subSessionSchema);
+mongoose.model('Organization', organizationSchema);
 
 // is the environment variable, NODE_ENV, set to PRODUCTION? 
 let dbconf;

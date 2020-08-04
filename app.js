@@ -54,6 +54,7 @@ const User = mongoose.model('User');
 const Coachee = mongoose.model('Coachee');
 const Sessions = mongoose.model('Sessions');
 const SubSession = mongoose.model('subSession');
+const Organization = mongoose.model('Organization');
 mongoose.set('useNewUrlParser', true);
 mongoose.set('useFindAndModify', false);
 mongoose.set('useCreateIndex', true);
@@ -97,7 +98,6 @@ const loggedOutOnly = (req, res, next) => {
 };
 
 const authObj = require('./authObj.js');
-console.log(authObj);
 const oauth2Client = new OAuth2 (
 	authObj.clientID, //ClientID
 	authObj.clientSecret, //Client Secret
@@ -107,7 +107,6 @@ oauth2Client.setCredentials({
 	refresh_token: authObj.refreshToken	
 });
 let accessToken;
-
 
 //===app routes====================================================
 app.get('/', (req, res) => {
@@ -122,14 +121,22 @@ app.post('/', passport.authenticate("local", {
 );
 
 app.get('/register', (req, res) => {
-	res.render('register');
+	
+	Organization.find({}, function(err, organizations) {
+		let organizationsList = [];
+		for (const i in organizations) {
+			const organization = {name: organizations[i].name};
+			organizationsList.push(organization);
+			res.render('register', {organizations: organizationsList});
+		}
+	});
 });
 
 //https://blog.cloudboost.io/node-js-authentication-with-passport-4a125f264cd4
 app.post('/register', (req, res, next) => {
-	const { first, last, password, username, phone } = req.body;
+	const { first, last, password, username, phone, organization } = req.body;
 	const name = first + " " + last;
-	User.create( {username, password, first, last, name, phone} )
+	User.create( {username, password, first, last, name, phone, organization} )
 		.then(user => {
 			req.login(user, err => {
 				if (err) {
@@ -337,6 +344,9 @@ app.post('/update', function(req, res) {
 								const afterMS = nextLog.sessionDate.getTime() + 86400000;
 								const beforeDate = new Date(beforeMS);
 								const afterDate = new Date(afterMS);
+								console.log('Email assigned for next session:');
+								console.log('* beforeDate: ', beforeDate);
+								console.log('* afterDate: ', afterDate);
 								schedule.scheduleJob(beforeDate, function() {
 									smtpTransport.sendMail(upcomingMailOptions, function(error, info) {
 										if (error) {
@@ -485,12 +495,14 @@ app.get('/add-coachee', function(req, res) {
 });
 
 app.post('/add-coachee', function(req, res) {
+	
 	const coachee = {
 		email: req.body.email,
 		first: req.body.first,
 		last: req.body.last,
 		name: req.body.first + " " + req.body.last,
-		phone: req.body.phone
+		phone: req.body.phone,
+		organization: req.user.organization
 	};
 	
 	Coachee.create(coachee, (err) => {
@@ -710,6 +722,9 @@ app.post('/create-sessions', function(req, res) {
 									const afterMS = subSessionsList[0].sessionDate.getTime() + 86400000;
 									const beforeDate = new Date(beforeMS);
 									const afterDate = new Date(afterMS);
+									console.log('Email assigned for first session:');
+									console.log('* beforeDate: ', beforeDate);
+									console.log('* afterDate: ', afterDate);
 									
 									schedule.scheduleJob(beforeDate, function() {
 										smtpTransport.sendMail(upcomingMailOptions, function(error, info) {
@@ -838,14 +853,11 @@ app.get('/sessions-log', function(req, res) {
 
 app.get('/delete-sessions', function(req, res) {
 	if (req.isAuthenticated()) {
-		
-		console.log(req.query);
+
 		const queryObject = {sessionsID: req.query.sessionsID};
 		
 		Sessions.findOneAndDelete(queryObject, function(err, deleteSessions) {
-			console.log('deleteSessions: ', deleteSessions);
 			SubSession.deleteMany(queryObject, function(err, deleteLogs) {
-				console.log('deleteLogs: ', deleteLogs);
 				res.redirect('/sessions');
 			});
 		});
