@@ -42,7 +42,7 @@ I learned how to prioritize what to code in order to come up with a MVP. In the 
 
 In two words: so much! Besides actually deploying the app, there's a lot of things that can be done to improve Coacher such as: 
 * implementing a calendar user interface to keep track of sessions 
-~~* send reminder emails to coaches when a session is about to occur~~ 
+* ~~send reminder emails to coaches when a session is about to occur~~ 
 * give the admin user the ability to add or remove additional fields to any form 
 * add additional details about a coach such as a headshot, their coaching specialties, etc. 
 * ability to export database info as a file, to Google Spreadsheet, etc.
