@@ -96,12 +96,8 @@ const loggedOutOnly = (req, res, next) => {
 	else res.redirect('/coacher');
 };
 
-const authObj = {
-	type: "OAuth2",
-	clientID: "115849050944-0c7pll5ff7010ubd4qnq9asfs6f9n2ht.apps.googleusercontent.com",
-	clientSecret: "-UyjeGyt0Tx6RBjdwi7v7rpG",
-	refreshToken: "1//0455ozVzVKn3YCgYIARAAGAQSNwF-L9IrBIA3dqln1BbOmQdN40bl7wjzEBac36IoInX0jgbjLDdWfrlXm9h3-hoiTc_Q2cD6PM0"
-}
+const authObj = require('./authObj.js');
+console.log(authObj);
 const oauth2Client = new OAuth2 (
 	authObj.clientID, //ClientID
 	authObj.clientSecret, //Client Secret
@@ -835,6 +831,25 @@ app.get('/sessions-log', function(req, res) {
 				});
 			}
 		});
+	} else {
+		res.redirect('/');
+	}
+});
+
+app.get('/delete-sessions', function(req, res) {
+	if (req.isAuthenticated()) {
+		
+		console.log(req.query);
+		const queryObject = {sessionsID: req.query.sessionsID};
+		
+		Sessions.findOneAndDelete(queryObject, function(err, deleteSessions) {
+			console.log('deleteSessions: ', deleteSessions);
+			SubSession.deleteMany(queryObject, function(err, deleteLogs) {
+				console.log('deleteLogs: ', deleteLogs);
+				res.redirect('/sessions');
+			});
+		});
+		
 	} else {
 		res.redirect('/');
 	}
