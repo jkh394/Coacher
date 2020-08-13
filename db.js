@@ -6,7 +6,8 @@ const bcrypt = require('bcrypt');
 
 const organizationSchema = new mongoose.Schema({
 	name: {type: String},
-	adminEmail: {type: String, ref: 'User'}
+	url: {type: String},
+	email: {type: String}
 });
 
 //coach/user schema for Passport authentication

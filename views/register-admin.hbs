@@ -1,0 +1,60 @@
+<link rel="stylesheet" type="text/css" href="../css/update.css"/>
+<!-- https://codepen.io/freeCodeCamp/pen/VPaoNP -->
+
+<div class="container">
+
+    <form id="survey-form" action="" method="POST">
+    
+		<h1 id="title" class="text-center">Register Admin Account</h1>
+        <p id="description" class="description text-center">Fill out the following information to register an admin account.</p>
+		
+		<hr style="border-color:white;">
+        
+        {{#if message}}
+				<div class="error" style="color:red;"> {{ message }}</div>
+        {{/if}}
+        <br>
+	
+        <div class="form-group" style="float:left; width:45%;">
+            <label id="name-label" for="name">First Name</label>
+            <input type="text" name="first" id="name" class="form-control" placeholder="Enter admin's first name" required />
+        </div>
+        
+        <div class="form-group" style="float:right; width:45%;">
+            <label id="name-label" for="name">Last Name</label>
+            <input type="text" name="last" id="name" class="form-control" placeholder="Enter admin's last name" required />
+        </div>
+        
+        <div class="form-group">
+            <label id="name-label" for="name">Email Address</label>
+            <input type="text" name="username" id="name" class="form-control" placeholder="Enter coach's email address" required />
+        </div>
+        
+        <div class="form-group">
+            <label id="name-label" for="name">Password</label>
+           <input type="password" name="password" class="form-control" placeholder="Enter admin's password" required>
+        </div>
+        
+        <div class="form-group">
+            <label id="name-label" for="name">Phone Number</label>
+            <input type="text" name="phone" id="name" class="form-control" placeholder="Enter coachee's phone number" required />
+        </div>
+        
+        <div class="form-group" style="margin-bottom: -5%;">
+            <label for="organization" style="float:left;">Select Organization:</label> <br>
+			<select name="organization" style="width:100%; margin-bottom: 10%;">
+			  <option value="" disabled selected>click to select</option>
+			  {{#each organizations}}
+			  <option value="{{name}}">{{name}}</option>
+			  {{/each}}
+			</select> 
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" id="submit" class="submit-button">
+            Submit
+            </button>
+        </div>
+        
+    </form>
+</div>
