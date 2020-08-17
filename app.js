@@ -141,7 +141,7 @@ app.post('/register-admin', (req, res) => {
 				if (err) {
 					console.log(err);
 				} else {
-					res.redirect('/');
+					res.redirect('/admin-success');
 				}
 			});
 		})
@@ -157,6 +157,10 @@ app.post('/register-admin', (req, res) => {
 				});
 			} else next(err);
 		});
+});
+
+app.get('/admin-success', (req, res) => {
+	res.render('admin-success');
 });
 
 app.get('/register', (req, res) => {
